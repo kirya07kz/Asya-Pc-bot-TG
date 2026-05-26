@@ -16,9 +16,27 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import config
 import bot as importbot
 
-# Установка темной темы и акцентного цвета CustomTkinter
+# =====================================================================
+# ЦВЕТОВАЯ ПАЛИТРА MATERIAL DESIGN 3 (DARK THEME)
+# =====================================================================
+M3_BG = "#141218"                  # Основной фон приложения (Surface/Background)
+M3_SURFACE_LOW = "#1d1b20"         # Фон бокового меню (Surface Container Low)
+M3_SURFACE_CONTAINER = "#211f26"   # Фон карточек и полей ввода (Surface Container)
+M3_SURFACE_HIGH = "#2b2930"        # Цвет для ховера и выделения (Surface Container High)
+M3_PRIMARY = "#d0bcff"             # Акцентный цвет кнопок / активной вкладки (Primary Light Purple)
+M3_ON_PRIMARY = "#381e72"          # Текст на активных элементах (On Primary Dark Purple)
+M3_PRIMARY_CONTAINER = "#4f378b"   # Контейнер для второстепенных кнопок
+M3_ON_PRIMARY_CONTAINER = "#eaddff"# Текст на второстепенных кнопках
+M3_TEXT = "#e6e1e5"                # Цвет основного текста (On Surface)
+M3_TEXT_MUTED = "#938f99"          # Цвет подсказок и неактивного текста (Outline)
+M3_GREEN = "#b5f2b8"               # Цвет статуса "Запущен" (Success)
+M3_ON_GREEN = "#003917"            # Текст на зеленом фоне
+M3_RED = "#ffb4ab"                 # Цвет статуса "Остановлен" / ошибки (Error)
+M3_ON_RED = "#690005"              # Текст на красном фоне
+
+# Установка базовой темы CustomTkinter
 ctk.set_appearance_mode("Dark")
-ctk.set_default_color_theme("blue")
+ctk.set_default_color_theme("blue")  # Базовый синий переопределяется нашими цветами
 
 # Блокировка повторного запуска GUI
 try:
@@ -61,10 +79,11 @@ class GuiLogHandler(logging.Handler):
 
 # Класс для фонового запуска бота в asyncio loop
 class BotRunner:
-    def __init__(self, log_callback, status_callback, restart_callback):
+    def __init__(self, log_callback, status_callback, restart_callback, quit_callback):
         self.log_callback = log_callback
         self.status_callback = status_callback
         self.restart_callback = restart_callback
+        self.quit_callback = quit_callback
         self.loop = None
         self.thread = None
         self.bot = None
@@ -99,7 +118,8 @@ class BotRunner:
                 self.log_callback("Получен запрос на перезапуск бота из Telegram. Перезапускаю...\n")
                 self.restart_callback()
             elif exit_code == 0:
-                self.log_callback("Получен запрос на выключение бота из Telegram. Бот остановлен.\n")
+                self.log_callback("Получен запрос на выключение бота из Telegram. Завершаю работу...\n")
+                self.quit_callback()
 
     async def _main_async(self):
         # Перезагружаем конфигурацию, чтобы обновить переменные из .env
@@ -164,15 +184,16 @@ class AsyaPcBotApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("Asya PC Bot Control Panel")
-        self.geometry("720x570")
+        self.title("Asya PC Bot [Остановлен]")
+        self.geometry("800x580")
         self.resizable(False, False)
+        self.configure(fg_color=M3_BG)
         
         self.icon_path = os.path.join(config.BASE_DIR, "icon.ico")
         if os.path.exists(self.icon_path):
             self.iconbitmap(self.icon_path)
             
-        self.bot_runner = BotRunner(self.write_log, self.update_bot_status, self.restart_bot)
+        self.bot_runner = BotRunner(self.write_log, self.update_bot_status, self.restart_bot, self.quit_app)
         self.tray_icon = None
         self.tray_thread = None
         self.is_quitting = False
@@ -199,98 +220,238 @@ class AsyaPcBotApp(ctk.CTk):
         self.after(500, self.auto_start_bot_on_launch)
 
     def setup_ui(self):
-        # Панель статуса и запуска (Сверху)
-        self.frame_top = ctk.CTkFrame(self, height=70, corner_radius=10)
-        self.frame_top.pack(fill="x", padx=15, pady=10)
+        # -------------------------------------------------------------
+        # Боковая панель навигации (Navigation Rail) в стиле Material 3
+        # -------------------------------------------------------------
+        self.frame_rail = ctk.CTkFrame(self, width=200, fg_color=M3_SURFACE_LOW, corner_radius=0)
+        self.frame_rail.pack(side="left", fill="y")
+        self.frame_rail.pack_propagate(False)
         
-        self.label_status_title = ctk.CTkLabel(self.frame_top, text="Статус бота:", font=ctk.CTkFont(size=14))
-        self.label_status_title.pack(side="left", padx=15, pady=20)
+        # Заголовок приложения
+        self.lbl_logo = ctk.CTkLabel(
+            self.frame_rail, 
+            text="Asya PC Bot", 
+            text_color=M3_PRIMARY, 
+            font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold")
+        )
+        self.lbl_logo.pack(padx=15, pady=(30, 5))
         
-        self.label_status = ctk.CTkLabel(self.frame_top, text="● Остановлен", text_color="#ef4444", font=ctk.CTkFont(size=14, weight="bold"))
-        self.label_status.pack(side="left", padx=5, pady=20)
+        self.lbl_version = ctk.CTkLabel(
+            self.frame_rail, 
+            text="Версия 2.0", 
+            text_color=M3_TEXT_MUTED, 
+            font=ctk.CTkFont(family="Segoe UI", size=11, slant="italic")
+        )
+        self.lbl_version.pack(padx=15, pady=(0, 30))
         
-        self.btn_toggle_bot = ctk.CTkButton(self.frame_top, text="Запустить бота", fg_color="#10b981", hover_color="#059669", width=150, command=self.toggle_bot_state)
-        self.btn_toggle_bot.pack(side="right", padx=15, pady=20)
+        # Навигационные кнопки
+        self.nav_buttons = {}
         
-        # Таб-панель (Центр)
-        self.tabview = ctk.CTkTabview(self, width=690, height=450)
-        self.tabview.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+        self.btn_nav_settings = ctk.CTkButton(
+            self.frame_rail, text="⚙️  Настройки", height=45, corner_radius=22,
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            command=lambda: self.switch_tab("settings")
+        )
+        self.btn_nav_settings.pack(fill="x", padx=12, pady=8)
+        self.nav_buttons["settings"] = self.btn_nav_settings
         
-        self.tab_settings = self.tabview.add("Настройки (.env)")
-        self.tab_programs = self.tabview.add("Программы (programs.json)")
-        self.tab_logs = self.tabview.add("Консоль логов")
+        self.btn_nav_programs = ctk.CTkButton(
+            self.frame_rail, text="🚀  Программы", height=45, corner_radius=22,
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            command=lambda: self.switch_tab("programs")
+        )
+        self.btn_nav_programs.pack(fill="x", padx=12, pady=8)
+        self.nav_buttons["programs"] = self.btn_nav_programs
+        
+        self.btn_nav_logs = ctk.CTkButton(
+            self.frame_rail, text="📊  Консоль логов", height=45, corner_radius=22,
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            command=lambda: self.switch_tab("logs")
+        )
+        self.btn_nav_logs.pack(fill="x", padx=12, pady=8)
+        self.nav_buttons["logs"] = self.btn_nav_logs
+        
+        # -------------------------------------------------------------
+        # Правая основная область контента
+        # -------------------------------------------------------------
+        self.frame_content = ctk.CTkFrame(self, fg_color="transparent")
+        self.frame_content.pack(side="right", fill="both", expand=True)
+        
+        # Панель статуса и запуска (Сверху) в стиле Material 3
+        self.frame_top = ctk.CTkFrame(self.frame_content, height=80, fg_color=M3_SURFACE_CONTAINER, corner_radius=16)
+        self.frame_top.pack(fill="x", padx=20, pady=20)
+        self.frame_top.pack_propagate(False)
+        
+        self.label_status_title = ctk.CTkLabel(
+            self.frame_top, text="Статус работы ПК:", 
+            text_color=M3_TEXT,
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="medium")
+        )
+        self.label_status_title.pack(side="left", padx=20, pady=25)
+        
+        self.label_status = ctk.CTkLabel(
+            self.frame_top, text="● Остановлен", 
+            text_color=M3_RED, 
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold")
+        )
+        self.label_status.pack(side="left", padx=5, pady=25)
+        
+        self.btn_toggle_bot = ctk.CTkButton(
+            self.frame_top, text="Запустить", 
+            fg_color=M3_PRIMARY, 
+            text_color=M3_ON_PRIMARY,
+            hover_color=M3_TEXT,
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            width=140, 
+            height=38,
+            corner_radius=19,
+            command=self.toggle_bot_state
+        )
+        self.btn_toggle_bot.pack(side="right", padx=20, pady=21)
+        
+        # Создание фреймов-вкладок
+        self.content_frames = {}
         
         # --- Вкладка Настройки ---
-        self.label_token = ctk.CTkLabel(self.tab_settings, text="Telegram Bot Token (BOT_TOKEN):", font=ctk.CTkFont(size=12, weight="bold"))
-        self.label_token.pack(anchor="w", padx=20, pady=(15, 2))
+        self.frame_settings = ctk.CTkFrame(self.frame_content, fg_color="transparent")
+        self.content_frames["settings"] = self.frame_settings
         
-        self.entry_token = ctk.CTkEntry(self.tab_settings, width=640, placeholder_text="Вставьте токен вашего бота (из @BotFather)")
-        self.entry_token.pack(padx=20, pady=5)
+        self.lbl_set_title = ctk.CTkLabel(self.frame_settings, text="Параметры окружения (.env)", text_color=M3_TEXT, font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"))
+        self.lbl_set_title.pack(anchor="w", padx=10, pady=(10, 15))
         
-        self.label_users = ctk.CTkLabel(self.tab_settings, text="Разрешенные ID администраторов (ALLOWED_USERS):", font=ctk.CTkFont(size=12, weight="bold"))
-        self.label_users.pack(anchor="w", padx=20, pady=(15, 2))
+        self.label_token = ctk.CTkLabel(self.frame_settings, text="Telegram Bot Token (BOT_TOKEN):", text_color=M3_TEXT, font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"))
+        self.label_token.pack(anchor="w", padx=10, pady=(5, 2))
         
-        self.entry_users = ctk.CTkEntry(self.tab_settings, width=640, placeholder_text="Пример: 123456789, 987654321 (через запятую)")
-        self.entry_users.pack(padx=20, pady=5)
+        self.entry_token = ctk.CTkEntry(
+            self.frame_settings, fg_color=M3_SURFACE_CONTAINER, border_color=M3_TEXT_MUTED,
+            text_color=M3_TEXT, placeholder_text_color=M3_TEXT_MUTED, corner_radius=8, height=35
+        )
+        self.entry_token.pack(fill="x", padx=10, pady=5)
         
-        self.label_tip = ctk.CTkLabel(self.tab_settings, text="* Бот будет реагировать на команды только от пользователей из этого списка ID.", text_color="#94a3b8", font=ctk.CTkFont(size=11, slant="italic"))
-        self.label_tip.pack(anchor="w", padx=20, pady=5)
+        self.label_users = ctk.CTkLabel(self.frame_settings, text="Разрешенные ID администраторов (ALLOWED_USERS):", text_color=M3_TEXT, font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"))
+        self.label_users.pack(anchor="w", padx=10, pady=(15, 2))
         
-        self.btn_save_settings = ctk.CTkButton(self.tab_settings, text="Сохранить настройки", fg_color="#3b82f6", hover_color="#2563eb", width=200, command=self.save_settings_from_ui)
-        self.btn_save_settings.pack(pady=30)
+        self.entry_users = ctk.CTkEntry(
+            self.frame_settings, fg_color=M3_SURFACE_CONTAINER, border_color=M3_TEXT_MUTED,
+            text_color=M3_TEXT, placeholder_text_color=M3_TEXT_MUTED, corner_radius=8, height=35
+        )
+        self.entry_users.pack(fill="x", padx=10, pady=5)
+        
+        self.label_tip = ctk.CTkLabel(
+            self.frame_settings, 
+            text="* Бот обрабатывает команды ТОЛЬКО от указанных пользователей для безопасности ПК.", 
+            text_color=M3_TEXT_MUTED, 
+            font=ctk.CTkFont(family="Segoe UI", size=11, slant="italic")
+        )
+        self.label_tip.pack(anchor="w", padx=10, pady=5)
+        
+        self.btn_save_settings = ctk.CTkButton(
+            self.frame_settings, text="Сохранить настройки", 
+            fg_color=M3_PRIMARY_CONTAINER, 
+            text_color=M3_ON_PRIMARY_CONTAINER,
+            hover_color=M3_PRIMARY,
+            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
+            width=220, 
+            height=42,
+            corner_radius=21,
+            command=self.save_settings_from_ui
+        )
+        self.btn_save_settings.pack(pady=40)
         
         # --- Вкладка Программы ---
-        # Форма добавления новой программы
-        self.frame_add_prog = ctk.CTkFrame(self.tab_programs)
-        self.frame_add_prog.pack(fill="x", padx=10, pady=10)
+        self.frame_programs = ctk.CTkFrame(self.frame_content, fg_color="transparent")
+        self.content_frames["programs"] = self.frame_programs
         
-        # Первая строка формы
-        self.entry_prog_name = ctk.CTkEntry(self.frame_add_prog, width=150, placeholder_text="Название (Блокнот)")
-        self.entry_prog_name.grid(row=0, column=0, padx=5, pady=5)
+        self.lbl_prog_title = ctk.CTkLabel(self.frame_programs, text="Список запускаемых программ (programs.json)", text_color=M3_TEXT, font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"))
+        self.lbl_prog_title.pack(anchor="w", padx=10, pady=(10, 10))
         
-        self.entry_prog_path = ctk.CTkEntry(self.frame_add_prog, width=280, placeholder_text="Путь к файлу запуска (.exe)")
-        self.entry_prog_path.grid(row=0, column=1, padx=5, pady=5)
+        # Форма добавления
+        self.frame_add_prog = ctk.CTkFrame(self.frame_programs, fg_color=M3_SURFACE_CONTAINER, corner_radius=12, height=95)
+        self.frame_add_prog.pack(fill="x", padx=10, pady=5)
         
-        self.btn_browse = ctk.CTkButton(self.frame_add_prog, text="Обзор...", width=70, command=self.browse_executable)
-        self.btn_browse.grid(row=0, column=2, padx=5, pady=5)
+        # Сетка формы
+        self.entry_prog_name = ctk.CTkEntry(self.frame_add_prog, width=130, height=32, corner_radius=6, placeholder_text="Имя (например, Chrome)")
+        self.entry_prog_name.grid(row=0, column=0, padx=8, pady=12)
         
-        self.entry_prog_process = ctk.CTkEntry(self.frame_add_prog, width=130, placeholder_text="Процесс (notepad.exe)")
-        self.entry_prog_process.grid(row=0, column=3, padx=5, pady=5)
+        self.entry_prog_path = ctk.CTkEntry(self.frame_add_prog, width=190, height=32, corner_radius=6, placeholder_text="Полный путь к .exe файлу")
+        self.entry_prog_path.grid(row=0, column=1, padx=4, pady=12)
         
-        self.btn_add_prog = ctk.CTkButton(self.frame_add_prog, text="Добавить", width=80, fg_color="#10b981", hover_color="#059669", command=self.add_program_from_ui)
-        self.btn_add_prog.grid(row=0, column=4, padx=5, pady=5)
+        self.btn_browse = ctk.CTkButton(
+            self.frame_add_prog, text="Обзор", fg_color=M3_PRIMARY_CONTAINER, text_color=M3_ON_PRIMARY_CONTAINER, hover_color=M3_PRIMARY,
+            width=65, height=32, corner_radius=6, command=self.browse_executable
+        )
+        self.btn_browse.grid(row=0, column=2, padx=4, pady=12)
         
-        # Список программ с прокруткой
-        self.scroll_progs = ctk.CTkScrollableFrame(self.tab_programs, width=650, height=260)
-        self.scroll_progs.pack(fill="both", expand=True, padx=10, pady=5)
+        self.entry_prog_process = ctk.CTkEntry(self.frame_add_prog, width=120, height=32, corner_radius=6, placeholder_text="Имя процесса (.exe)")
+        self.entry_prog_process.grid(row=0, column=3, padx=4, pady=12)
+        
+        self.btn_add_prog = ctk.CTkButton(
+            self.frame_add_prog, text="Добавить", fg_color=M3_PRIMARY, text_color=M3_ON_PRIMARY, hover_color=M3_TEXT,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            width=70, height=32, corner_radius=6, command=self.add_program_from_ui
+        )
+        self.btn_add_prog.grid(row=0, column=4, padx=8, pady=12)
+        
+        # Список с прокруткой
+        self.scroll_progs = ctk.CTkScrollableFrame(self.frame_programs, fg_color="transparent", height=230)
+        self.scroll_progs.pack(fill="both", expand=True, padx=5, pady=10)
         
         # --- Вкладка Логи ---
-        self.textbox_logs = ctk.CTkTextbox(self.tab_logs, width=650, height=310, font=ctk.CTkFont(family="Consolas", size=11))
-        self.textbox_logs.pack(fill="both", expand=True, padx=10, pady=10)
+        self.frame_logs = ctk.CTkFrame(self.frame_content, fg_color="transparent")
+        self.content_frames["logs"] = self.frame_logs
+        
+        self.lbl_log_title = ctk.CTkLabel(self.frame_logs, text="Логи работы и системные события", text_color=M3_TEXT, font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"))
+        self.lbl_log_title.pack(anchor="w", padx=10, pady=(10, 10))
+        
+        self.textbox_logs = ctk.CTkTextbox(
+            self.frame_logs, fg_color=M3_SURFACE_CONTAINER, text_color=M3_TEXT, border_color=M3_TEXT_MUTED, border_width=1,
+            font=ctk.CTkFont(family="Consolas", size=11), corner_radius=12
+        )
+        self.textbox_logs.pack(fill="both", expand=True, padx=10, pady=5)
         self.textbox_logs.configure(state="disabled")
         
-        self.btn_clear_logs = ctk.CTkButton(self.tab_logs, text="Очистить консоль", width=150, command=self.clear_logs)
-        self.btn_clear_logs.pack(pady=(0, 10))
+        self.btn_clear_logs = ctk.CTkButton(
+            self.frame_logs, text="Очистить терминал", 
+            fg_color=M3_SURFACE_CONTAINER, 
+            text_color=M3_TEXT,
+            hover_color=M3_SURFACE_HIGH,
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            width=160, 
+            height=36,
+            corner_radius=18,
+            command=self.clear_logs
+        )
+        self.btn_clear_logs.pack(pady=12)
+        
+        # Дефолтная активная вкладка
+        self.switch_tab("settings")
+
+    def switch_tab(self, tab_name: str):
+        # Переключение визуальных стилей вкладок
+        for name, button in self.nav_buttons.items():
+            if name == tab_name:
+                button.configure(fg_color=M3_PRIMARY, text_color=M3_ON_PRIMARY, hover_color=M3_TEXT)
+            else:
+                button.configure(fg_color="transparent", text_color=M3_TEXT, hover_color=M3_SURFACE_HIGH)
+                
+        # Прячем все вкладки
+        for frame in self.content_frames.values():
+            frame.pack_forget()
+            
+        # Показываем выбранную вкладку
+        self.content_frames[tab_name].pack(fill="both", expand=True, padx=20, pady=(0, 20))
 
     # --- Функции Управления Ботом ---
-    def auto_start_bot_on_launch(self):
-        token = self.entry_token.get().strip()
-        if token and token != "your_telegram_bot_token_here" and token.strip():
-            self.write_log("Выполняю автозапуск бота...\n")
-            self.toggle_bot_state()
-
     def toggle_bot_state(self):
         if self.bot_runner.is_running:
             self.bot_runner.stop()
         else:
-            # Сначала проверяем заполненность настроек
             token = self.entry_token.get().strip()
             if not token:
                 messagebox.showerror("Ошибка", "Заполните поле Telegram Bot Token во вкладке Настройки!")
-                self.tabview.set("Настройки (.env)")
+                self.switch_tab("settings")
                 return
             
-            # Сохраняем настройки принудительно перед запуском
             self.save_settings_from_ui(silent=True)
             self.btn_toggle_bot.configure(state="disabled")
             self.bot_runner.start()
@@ -299,11 +460,18 @@ class AsyaPcBotApp(ctk.CTk):
         def update():
             self.btn_toggle_bot.configure(state="normal")
             if status == "RUNNING":
-                self.label_status.configure(text="● Запущен", text_color="#10b981")
-                self.btn_toggle_bot.configure(text="Остановить бота", fg_color="#ef4444", hover_color="#dc2626")
+                self.label_status.configure(text="● Запущен", text_color=M3_GREEN)
+                self.title("Asya PC Bot [Запущен]")
+                self.btn_toggle_bot.configure(text="Остановить", fg_color=M3_RED, text_color=M3_ON_RED, hover_color=M3_TEXT)
             else:
-                self.label_status.configure(text="● Остановлен", text_color="#ef4444")
-                self.btn_toggle_bot.configure(text="Запустить бота", fg_color="#10b981", hover_color="#059669")
+                self.label_status.configure(text="● Остановлен", text_color=M3_RED)
+                self.title("Asya PC Bot [Остановлен]")
+                self.btn_toggle_bot.configure(text="Запустить", fg_color=M3_PRIMARY, text_color=M3_ON_PRIMARY, hover_color=M3_TEXT)
+                
+                # При остановке убираем значок с панели задач (сворачиваем в трей)
+                if not self.is_quitting:
+                    self.withdraw()
+                    self.write_log("Бот остановлен. Окно автоматически скрыто в системный трей.\n")
         self.after(0, update)
 
     def restart_bot(self):
@@ -320,6 +488,12 @@ class AsyaPcBotApp(ctk.CTk):
             self.textbox_logs.see("end")
             self.textbox_logs.configure(state="disabled")
         self.after(0, append)
+
+    def auto_start_bot_on_launch(self):
+        token = self.entry_token.get().strip()
+        if token and token != "your_telegram_bot_token_here" and token.strip():
+            self.write_log("Выполняю автозапуск бота на старте...\n")
+            self.toggle_bot_state()
 
     def clear_logs(self):
         self.textbox_logs.configure(state="normal")
@@ -386,34 +560,43 @@ class AsyaPcBotApp(ctk.CTk):
             self.write_log(f"Ошибка сохранения json программ: {e}\n")
 
     def refresh_programs_list(self):
-        # Очищаем виджеты в скролл-фрейме
+        # Очищаем виджеты
         for widget in self.scroll_progs.winfo_children():
             widget.destroy()
             
         programs = self.load_programs_list()
         
-        # Отрисовка заголовков таблицы
-        label_h1 = ctk.CTkLabel(self.scroll_progs, text="Название программы", font=ctk.CTkFont(weight="bold"))
-        label_h1.grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        label_h2 = ctk.CTkLabel(self.scroll_progs, text="Имя процесса", font=ctk.CTkFont(weight="bold"))
-        label_h2.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+        # Заголовки
+        lbl_h1 = ctk.CTkLabel(self.scroll_progs, text="Название программы", text_color=M3_PRIMARY, font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"))
+        lbl_h1.grid(row=0, column=0, padx=15, pady=8, sticky="w")
+        lbl_h2 = ctk.CTkLabel(self.scroll_progs, text="Имя процесса", text_color=M3_PRIMARY, font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"))
+        lbl_h2.grid(row=0, column=1, padx=15, pady=8, sticky="w")
         
         for idx, prog in enumerate(programs):
             name = prog.get("name", "")
             process = prog.get("process", "")
-            path = prog.get("path", "")
             
-            # Название
-            lbl_name = ctk.CTkLabel(self.scroll_progs, text=name, anchor="w", width=180)
-            lbl_name.grid(row=idx+1, column=0, padx=10, pady=5, sticky="w")
+            # Карточка для строки списка программы
+            frame_item = ctk.CTkFrame(self.scroll_progs, fg_color=M3_SURFACE_CONTAINER, height=45, corner_radius=8)
+            frame_item.grid(row=idx+1, column=0, columnspan=3, fill="x", padx=5, pady=4)
+            frame_item.grid_columnconfigure(0, weight=2)
+            frame_item.grid_columnconfigure(1, weight=2)
+            frame_item.grid_columnconfigure(2, weight=1)
             
-            # Процесс
-            lbl_proc = ctk.CTkLabel(self.scroll_progs, text=process or "[Не указан]", anchor="w", width=180, text_color="#94a3b8")
-            lbl_proc.grid(row=idx+1, column=1, padx=10, pady=5, sticky="w")
+            lbl_name = ctk.CTkLabel(frame_item, text=name, text_color=M3_TEXT, font=ctk.CTkFont(family="Segoe UI", size=12, weight="medium"))
+            lbl_name.grid(row=0, column=0, padx=15, pady=10, sticky="w")
             
-            # Кнопка удаления
-            btn_del = ctk.CTkButton(self.scroll_progs, text="Удалить", width=80, fg_color="#ef4444", hover_color="#dc2626", command=lambda i=idx: self.delete_program(i))
-            btn_del.grid(row=idx+1, column=2, padx=10, pady=5)
+            lbl_proc = ctk.CTkLabel(frame_item, text=process or "[Не указан]", text_color=M3_TEXT_MUTED, font=ctk.CTkFont(family="Segoe UI", size=12))
+            lbl_proc.grid(row=0, column=1, padx=15, pady=10, sticky="w")
+            
+            btn_del = ctk.CTkButton(
+                frame_item, text="Удалить", 
+                fg_color=M3_RED, text_color=M3_ON_RED, hover_color=M3_TEXT,
+                font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+                width=75, height=28, corner_radius=14,
+                command=lambda i=idx: self.delete_program(i)
+            )
+            btn_del.grid(row=0, column=2, padx=15, pady=8, sticky="e")
 
     def browse_executable(self):
         filepath = filedialog.askopenfilename(
@@ -450,7 +633,6 @@ class AsyaPcBotApp(ctk.CTk):
         })
         self.save_programs_list(programs)
         
-        # Очищаем форму ввода
         self.entry_prog_name.delete(0, "end")
         self.entry_prog_path.delete(0, "end")
         self.entry_prog_process.delete(0, "end")
@@ -473,7 +655,6 @@ class AsyaPcBotApp(ctk.CTk):
 
     def _run_tray_loop(self):
         if not os.path.exists(self.icon_path):
-            # Если иконки нет, создаем заглушку 16x16
             img = Image.new("RGBA", (16, 16), color=(59, 130, 246, 255))
         else:
             img = Image.open(self.icon_path)
@@ -498,7 +679,6 @@ class AsyaPcBotApp(ctk.CTk):
         self.focus_force()
 
     def on_close_event(self):
-        # Вместо закрытия скрываем в трей
         self.withdraw()
         self.write_log("Окно свернуто в системный трей.\n")
 
@@ -506,21 +686,14 @@ class AsyaPcBotApp(ctk.CTk):
         if self.is_quitting:
             return
         self.is_quitting = True
-        
-        # Останавливаем бота
         self.bot_runner.stop()
-        
-        # Закрываем иконку трея
         if self.tray_icon:
             self.tray_icon.stop()
-            
-        # Закрываем GUI
         self.destroy()
         sys.exit(0)
 
 if __name__ == "__main__":
     if not acquire_gui_lock():
-        # Показываем сообщение и выходим, если копия уже запущена
         root = ctk.CTk()
         root.withdraw()
         messagebox.showerror("Ошибка", "Asya PC Bot Control Panel уже запущена!")
