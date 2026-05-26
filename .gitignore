@@ -29,3 +29,7 @@ last_start.txt
 # Личная документация по автозагрузке
 autorun.md
 
+# Личные сгенерированные файлы и ярлыки
+icon.ico
+Asya Pc Bot.lnk
+generate_assets.py

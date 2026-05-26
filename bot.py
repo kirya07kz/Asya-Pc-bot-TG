@@ -158,6 +158,10 @@ def get_system_inline_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="📊 Диспетчер задач", callback_data="sys_taskmgr")
     )
     builder.row(
+        InlineKeyboardButton(text="🔄 Перезапустить бота", callback_data="bot_restart"),
+        InlineKeyboardButton(text="⏹️ Выключить бота", callback_data="bot_exit")
+    )
+    builder.row(
         InlineKeyboardButton(text="◀️ Назад", callback_data="menu_main")
     )
     return builder.as_markup()
@@ -335,6 +339,32 @@ async def callback_taskmgr(callback: CallbackQuery):
         await callback.answer("Диспетчер задач успешно запущен!")
     except Exception as e:
         await callback.answer(f"Ошибка Диспетчера задач: {e}", show_alert=True)
+
+# Действие бота: Перезапустить бота
+@router.callback_query(F.data == "bot_restart")
+async def callback_bot_restart(callback: CallbackQuery):
+    try:
+        await callback.answer("Выполняется перезапуск бота...", show_alert=True)
+        await callback.message.answer("🔄 Перезапускаю Asya Pc Bot...")
+        sys.exit(42)
+    except SystemExit:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка перезапуска бота: {e}")
+        await callback.answer(f"Ошибка перезапуска: {e}", show_alert=True)
+
+# Действие бота: Выключить бота
+@router.callback_query(F.data == "bot_exit")
+async def callback_bot_exit(callback: CallbackQuery):
+    try:
+        await callback.answer("Бот прекращает работу...", show_alert=True)
+        await callback.message.answer("⏹️ Работа Asya Pc Bot завершена. Бот отключен.\n\nЗапуск произойдет автоматически при включении ПК или при ручном запуске.")
+        sys.exit(0)
+    except SystemExit:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка при выходе из бота: {e}")
+        await callback.answer(f"Ошибка выхода: {e}", show_alert=True)
 
 # Системное действие: Закрыть активное окно
 @router.callback_query(F.data == "sys_close_active")
