@@ -285,7 +285,7 @@ class AsyaPcBotApp(ctk.CTk):
         self.label_status_title = ctk.CTkLabel(
             self.frame_top, text="Статус работы ПК:", 
             text_color=M3_TEXT,
-            font=ctk.CTkFont(family="Segoe UI", size=14, weight="medium")
+            font=ctk.CTkFont(family="Segoe UI", size=14)
         )
         self.label_status_title.pack(side="left", padx=20, pady=25)
         
@@ -578,12 +578,12 @@ class AsyaPcBotApp(ctk.CTk):
             
             # Карточка для строки списка программы
             frame_item = ctk.CTkFrame(self.scroll_progs, fg_color=M3_SURFACE_CONTAINER, height=45, corner_radius=8)
-            frame_item.grid(row=idx+1, column=0, columnspan=3, fill="x", padx=5, pady=4)
+            frame_item.grid(row=idx+1, column=0, columnspan=3, sticky="ew", padx=5, pady=4)
             frame_item.grid_columnconfigure(0, weight=2)
             frame_item.grid_columnconfigure(1, weight=2)
             frame_item.grid_columnconfigure(2, weight=1)
             
-            lbl_name = ctk.CTkLabel(frame_item, text=name, text_color=M3_TEXT, font=ctk.CTkFont(family="Segoe UI", size=12, weight="medium"))
+            lbl_name = ctk.CTkLabel(frame_item, text=name, text_color=M3_TEXT, font=ctk.CTkFont(family="Segoe UI", size=12))
             lbl_name.grid(row=0, column=0, padx=15, pady=10, sticky="w")
             
             lbl_proc = ctk.CTkLabel(frame_item, text=process or "[Не указан]", text_color=M3_TEXT_MUTED, font=ctk.CTkFont(family="Segoe UI", size=12))
