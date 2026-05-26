@@ -25,3 +25,7 @@ last_start.txt
 *.sln
 *.sw?
 *.user
+
+# Личная документация по автозагрузке
+autorun.md
+
