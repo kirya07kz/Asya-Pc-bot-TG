@@ -1,0 +1,27 @@
+# Виртуальное окружение Python
+venv/
+.venv/
+env/
+ENV/
+
+# Кэш Python и байт-код
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Файлы конфигурации и доступы (содержат ТОКЕН БОТА - КРИТИЧЕСКИ ВАЖНО!)
+.env
+
+# Файлы состояния и блокировок бота
+bot.lock
+last_start.txt
+
+# Настройки сред разработки (IDE)
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.user

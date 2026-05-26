@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Блокнот",
+    "path": "notepad.exe",
+    "process": "notepad.exe"
+  },
+  {
+    "name": "Калькулятор",
+    "path": "calc.exe",
+    "process": "CalculatorApp.exe"
+  },
+  {
+    "name": "Google Chrome",
+    "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "process": "chrome.exe"
+  },
+  {
+    "name": "Telegram",
+    "path": "%APPDATA%\\Telegram Desktop\\Telegram.exe",
+    "process": "Telegram.exe"
+  },
+  {
+    "name": "Диспетчер задач",
+    "path": "taskmgr.exe",
+    "process": "Taskmgr.exe"
+  }
+]
