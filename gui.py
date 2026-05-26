@@ -14,6 +14,7 @@ from pystray import MenuItem as item, Menu
 # Настройка системного пути
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import config
+import bot as importbot
 
 # Установка темной темы и акцентного цвета CustomTkinter
 ctk.set_appearance_mode("Dark")
@@ -101,9 +102,6 @@ class BotRunner:
                 self.log_callback("Получен запрос на выключение бота из Telegram. Бот остановлен.\n")
 
     async def _main_async(self):
-        import config
-        importbot = importlib.import_module("bot")
-        
         # Перезагружаем конфигурацию, чтобы обновить переменные из .env
         importlib.reload(config)
         
