@@ -33,3 +33,7 @@ autorun.md
 icon.ico
 Asya Pc Bot.lnk
 generate_assets.py
+
+# Скомпилированное GUI-приложение и его блокировка
+Asya Pc Bot.exe
+gui.lock

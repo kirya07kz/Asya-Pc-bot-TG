@@ -36,7 +36,7 @@ def acquire_lock():
     if not has_msvcrt:
         return
     global lock_file
-    lock_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bot.lock")
+    lock_path = os.path.join(config.BASE_DIR, "bot.lock")
     try:
         lock_file = open(lock_path, "w")
         msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
@@ -47,7 +47,7 @@ def acquire_lock():
 
 # Функция для защиты от спама сообщениями о запуске
 def should_send_startup_notification() -> bool:
-    state_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "last_start.txt")
+    state_file = os.path.join(config.BASE_DIR, "last_start.txt")
     current_time = time.time()
     
     if os.path.exists(state_file):

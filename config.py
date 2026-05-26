@@ -1,8 +1,18 @@
 import os
+import sys
 from dotenv import load_dotenv
 
-# Загружаем переменные из файла .env
-load_dotenv()
+# Определяем базовую директорию проекта
+if getattr(sys, 'frozen', False):
+    # Если запущено как скомпилированный EXE через PyInstaller
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    # Обычный запуск через интерпретатор Python
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Загружаем переменные из файла .env в базовой директории
+env_path = os.path.join(BASE_DIR, ".env")
+load_dotenv(dotenv_path=env_path)
 
 # Токен бота
 BOT_TOKEN = os.getenv("BOT_TOKEN", "your_telegram_bot_token_here")
@@ -18,5 +28,5 @@ if ALLOWED_USERS_RAW:
             ALLOWED_USERS.append(int(user_id_str))
 
 # Путь к файлу конфигурации программ
-PROGRAMS_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "programs.json")
+PROGRAMS_FILE_PATH = os.path.join(BASE_DIR, "programs.json")
 
