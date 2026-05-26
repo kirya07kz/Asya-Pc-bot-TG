@@ -12,7 +12,7 @@ else:
 
 # Загружаем переменные из файла .env в базовой директории
 env_path = os.path.join(BASE_DIR, ".env")
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 
 # Токен бота
 BOT_TOKEN = os.getenv("BOT_TOKEN", "your_telegram_bot_token_here")
